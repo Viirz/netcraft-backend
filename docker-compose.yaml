@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:  
+  mysql:
+    image: mysql:8.0
+    container_name: netcraft_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: netcraft
+      MYSQL_USER: netcraft_user
+      MYSQL_PASSWORD: netcraft_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - netcraft_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  web:
+    build: .
+    container_name: netcraft_web
+    ports:
+      - "3000:5000"
+    environment:
+      FLASK_ENV: development
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: netcraft
+      DB_USER: netcraft_user
+      DB_PASSWORD: netcraft_password
+      JWT_SECRET_KEY: your-super-secret-jwt-key-change-this-in-production
+      MAIL_SERVER_API_KEY: change-this-in-production
+      MAIL_SERVER_DOMAIN: change-this-in-production
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - netcraft_network
+    restart: unless-stopped
+    volumes:
+      - .:/app
+
+volumes:
+  mysql_data:
+
+networks:
+  netcraft_network:
+    driver: bridge
