@@ -28,6 +28,29 @@ def sanitize_project_input(data):
         return sanitized
     return data
 
+@projects_bp.route('/my-projects', methods=['GET'])
+@jwt_required()
+def get_my_projects():
+    try:
+        current_user_id = get_jwt_identity()
+        
+        # Query all projects for the current user, ordered by creation date (newest first)
+        projects = Project.query.filter_by(owner_ulid=current_user_id)\
+                                .order_by(Project.created_at.desc())\
+                                .all()
+        
+        # Convert projects to dict format without the data column
+        projects_data = [project.to_dict(include_data=False) for project in projects]
+        
+        return jsonify({
+            'projects': projects_data,
+            'count': len(projects_data)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to retrieve projects for user {current_user_id}: {str(e)}")
+        return jsonify({'error': 'Failed to retrieve projects'}), 400
+
 @projects_bp.route('/save', methods=['POST'])
 @jwt_required()
 def save_project():
